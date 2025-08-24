@@ -5,10 +5,6 @@
 
 A real-time multiplayer drawing and guessing game backend built with Node.js, GraphQL, MongoDB, and Redis.
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
-![Node](https://img.shields.io/badge/node-%3E%3D16.0.0-brightgreen)
-
 ## 🎯 Features
 
 - **Real-time Gameplay**
@@ -232,3 +228,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 For support, email [your-email@example.com](mailto:saurabhbisht076@gmail.com) or create an issue in the repository.
 ```
+
