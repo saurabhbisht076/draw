@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#8B5CF6" />
+    <meta name="description" content="Canvas Conspiracy - A multiplayer drawing and storytelling party game" />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    
+    <!-- Preload fonts for better performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Preload your logo image -->
+    <link rel="preload" href="%PUBLIC_URL%/logo512.png" as="image">
+    
+    <title>Canvas Conspiracy - Draw, Tell, Guess & Win!</title>
+    
+    <style>
+      /* Loading screen */
+      #loading-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, rgba(76, 29, 149, 0.9) 0%, rgba(30, 58, 138, 0.9) 50%, rgba(49, 46, 129, 0.9) 100%),
+                    url('%PUBLIC_URL%/logo512.png');
+        background-size: cover, 40%;
+        background-position: center, center;
+        background-repeat: no-repeat, no-repeat;
+        background-attachment: fixed, fixed;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        color: white;
+        font-family: 'Inter', sans-serif;
+      }
+      
+      /* Alternative background styles for different effects */
+      
+      /* Option 1: Large centered logo with overlay */
+      .bg-option-1 {
+        background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)),
+                    url('%PUBLIC_URL%/logo512.png');
+        background-size: cover;
+        background-position: center;
+      }
+      
+      /* Option 2: Subtle watermark */
+      .bg-option-2 {
+        background: linear-gradient(135deg, #4c1d95 0%, #1e3a8a 50%, #312e81 100%),
+                    url('%PUBLIC_URL%/logo512.png');
+        background-size: cover, 30%;
+        background-position: center, center;
+        background-blend-mode: overlay;
+      }
+      
+      /* Option 3: Tiled pattern */
+      .bg-option-3 {
+        background: linear-gradient(135deg, rgba(76, 29, 149, 0.8) 0%, rgba(30, 58, 138, 0.8) 50%, rgba(49, 46, 129, 0.8) 100%),
+                    url('%PUBLIC_URL%/logo512.png');
+        background-size: cover, 20%;
+        background-position: center, center;
+        background-repeat: no-repeat, repeat;
+      }
+      
+      .loading-logo {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        animation: bounce 2s infinite;
+        filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3));
+      }
+      
+      .loading-text {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 2rem;
+        background: linear-gradient(135deg, #a855f7, #ec4899);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+      }
+      
+      /* Enhanced content container for better visibility */
+      .loading-content {
+        background: rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 3rem 2rem;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        text-align: center;
+      }
+      
+      .loading-dots {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+      }
+      
+      .loading-dot {
+        width: 12px;
+        height: 12px;
+        background: #a855f7;
+        border-radius: 50%;
+        animation: loading 1.4s ease-in-out infinite both;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+      }
+      
+      .loading-dot:nth-child(1) { animation-delay: -0.32s; }
+      .loading-dot:nth-child(2) { animation-delay: -0.16s; }
+      .loading-dot:nth-child(3) { animation-delay: 0s; }
+      
+      /* Additional image element for more control */
+      .loading-bg-image {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 300px;
+        height: 300px;
+        opacity: 0.1;
+        z-index: -1;
+        animation: float 3s ease-in-out infinite;
+      }
+      
+      @keyframes bounce {
+        0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+        40% { transform: translateY(-10px); }
+        60% { transform: translateY(-5px); }
+      }
+      
+      @keyframes loading {
+        0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
+        40% { transform: scale(1); opacity: 1; }
+      }
+      
+      @keyframes float {
+        0%, 100% { transform: translate(-50%, -50%) scale(1); }
+        50% { transform: translate(-50%, -50%) scale(1.05); }
+      }
+      
+      /* Responsive adjustments */
+      @media (max-width: 768px) {
+        #loading-screen {
+          background-size: cover, 50%;
+        }
+        
+        .loading-content {
+          padding: 2rem 1.5rem;
+          margin: 1rem;
+        }
+        
+        .loading-logo {
+          font-size: 3rem;
+        }
+        
+        .loading-text {
+          font-size: 1.25rem;
+        }
+        
+        .loading-bg-image {
+          width: 200px;
+          height: 200px;
+        }
+      }
+      
+      /* Hide loading screen when React app loads */
+      .app-loaded #loading-screen {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.5s ease-out;
+      }
+    </style>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+      <!-- Optional: Additional background image element for more control -->
+      <img src="%PUBLIC_URL%/logo512.png" alt="" class="loading-bg-image" />
+      
+      <div class="loading-content">
+        <div class="loading-logo">🎨</div>
+        <div class="loading-text">Canvas Conspiracy</div>
+        <div class="loading-dots">
+          <div class="loading-dot"></div>
+          <div class="loading-dot"></div>
+          <div class="loading-dot"></div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- React App Root -->
+    <div id="root"></div>
+    
+    <script>
+      // Hide loading screen when React app mounts
+      window.addEventListener('load', function() {
+        setTimeout(function() {
+          document.body.classList.add('app-loaded');
+          setTimeout(function() {
+            const loadingScreen = document.getElementById('loading-screen');
+            if (loadingScreen) {
+              loadingScreen.remove();
+            }
+          }, 1000);
+        }, 1000); // Show loading for at least 1 second
+      });
+    </script>
+  </body>
+</html>
