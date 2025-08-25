@@ -2,6 +2,7 @@
 module.exports = {
   content: [
     "./src/**/*.{js,jsx,ts,tsx}",
+    "./src/App.js", // Ensure Tailwind CSS works on App.js
   ],
   theme: {
     extend: {

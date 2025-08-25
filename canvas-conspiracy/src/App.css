@@ -7,7 +7,6 @@ body {
   background: linear-gradient(to bottom right, #0f2027, #203a43, #2c5364);
   color: #ffffff;
   min-height: 100vh;
-  overflow: hidden;
 }
 
 /* Sound toggle button */
