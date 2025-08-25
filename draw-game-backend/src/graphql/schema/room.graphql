@@ -1,0 +1,68 @@
+type Room {
+  id: ID!
+  code: String!
+  host: User!
+  status: RoomStatus!
+  players: [Player!]!
+  settings: RoomSettings!
+  currentRound: Int!
+  currentPhase: GamePhase!
+  createdAt: String!
+  updatedAt: String!
+}
+
+enum RoomStatus {
+  WAITING
+  PLAYING
+  FINISHED
+}
+
+enum GamePhase {
+  DRAWING
+  STORYTELLING
+  VOTING
+  RESULTS
+}
+
+type Player {
+  user: User!
+  status: PlayerStatus!
+  score: Int!
+}
+
+enum PlayerStatus {
+  ACTIVE
+  DRAWING
+  WRITING
+  VOTING
+}
+
+type RoomSettings {
+  maxPlayers: Int!
+  rounds: Int!
+  timePerRound: Int!
+}
+
+input CreateRoomInput {
+  maxPlayers: Int!
+  rounds: Int!
+  timePerRound: Int!
+}
+
+type Query {
+  room(id: ID!): Room! @auth
+  activeRooms: [Room!]! @auth
+}
+
+type Mutation {
+  createRoom(input: CreateRoomInput!): Room! @auth
+  joinRoom(code: String!): Room! @auth
+  leaveRoom(roomId: ID!): Boolean! @auth
+  updateRoomSettings(roomId: ID!, input: CreateRoomInput!): Room! @auth
+}
+
+type Subscription {
+  roomUpdated(roomId: ID!): Room! @auth
+  playerJoined(roomId: ID!): Player! @auth
+  playerLeft(roomId: ID!): Player! @auth
+}

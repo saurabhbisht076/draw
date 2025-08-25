@@ -1,0 +1,84 @@
+type Game {
+  id: ID!
+  room: Room!
+  round: Int!
+  phase: GamePhase!
+  timeLeft: Int!
+  drawings: [Drawing!]!
+  stories: [Story!]!
+  votes: [Vote!]!
+  scores: [PlayerScore!]!
+  status: GameStatus!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type Drawing {
+  id: ID!
+  player: User!
+  data: String!
+  createdAt: String!
+}
+
+type Story {
+  id: ID!
+  player: User!
+  drawing: Drawing!
+  content: String!
+  createdAt: String!
+}
+
+type Vote {
+  id: ID!
+  player: User!
+  story: Story!
+  createdAt: String!
+}
+
+type PlayerScore {
+  player: User!
+  score: Int!
+  drawingPoints: Int!
+  storyPoints: Int!
+  votePoints: Int!
+}
+
+enum GameStatus {
+  IN_PROGRESS
+  COMPLETED
+}
+
+input DrawingInput {
+  gameId: ID!
+  data: String!
+}
+
+input StoryInput {
+  gameId: ID!
+  drawingId: ID!
+  content: String!
+}
+
+input VoteInput {
+  gameId: ID!
+  storyId: ID!
+}
+
+type Query {
+  game(id: ID!): Game! @auth
+  gameHistory(userId: ID!): [Game!]! @auth
+}
+
+type Mutation {
+  startGame(roomId: ID!): Game! @auth
+  submitDrawing(input: DrawingInput!): Drawing! @auth
+  submitStory(input: StoryInput!): Story! @auth
+  submitVote(input: VoteInput!): Vote! @auth
+}
+
+type Subscription {
+  gameStateUpdated(gameId: ID!): Game! @auth
+  drawingSubmitted(gameId: ID!): Drawing! @auth
+  storySubmitted(gameId: ID!): Story! @auth
+  voteSubmitted(gameId: ID!): Vote! @auth
+}

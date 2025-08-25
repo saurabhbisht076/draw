@@ -1,0 +1,42 @@
+type User {
+  id: ID!
+  username: String!
+  email: String!
+  stats: UserStats!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type UserStats {
+  gamesPlayed: Int!
+  totalScore: Int!
+  wins: Int!
+}
+
+type AuthPayload {
+  token: String!
+  user: User!
+}
+
+input RegisterInput {
+  username: String!
+  email: String!
+  password: String!
+}
+
+input LoginInput {
+  email: String!
+  password: String!
+}
+
+type Query {
+  me: User! @auth
+  user(id: ID!): User! @auth
+  users: [User!]! @auth
+}
+
+type Mutation {
+  register(input: RegisterInput!): AuthPayload!
+  login(input: LoginInput!): AuthPayload!
+  updateProfile(username: String!): User! @auth
+}
