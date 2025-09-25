@@ -1,12 +1,62 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Settings, Home, Copy, CheckCircle, Play, Users, Clock, Target } from 'lucide-react';
 import Button from '../UI/Button';
 
-const Lobby = ({ roomCode, onStartGame, onLeaveRoom, players = [] }) => {
-  const [maxPlayers, setMaxPlayers] = useState(6);
-  const [roundTime, setRoundTime] = useState(90);
-  const [rounds, setRounds] = useState(3);
+const Lobby = ({ roomCode, onStartGame, onLeaveRoom, players = [], roomSettings, loading }) => {
+  const [maxPlayers, setMaxPlayers] = useState(roomSettings?.maxPlayers || 6);
+  const [roundTime, setRoundTime] = useState(roomSettings?.roundTime || 90);
+  const [rounds, setRounds] = useState(roomSettings?.rounds || 3);
   const [copied, setCopied] = useState(false);
+  const [settingsChanged, setSettingsChanged] = useState(false);
+  
+  // FIXED: Use refs to track if user is actively changing settings
+  const userIsChangingSettings = useRef(false);
+  const settingsChangeTimeout = useRef(null);
+
+  // FIXED: Only update local state from server if user isn't actively changing settings
+  useEffect(() => {
+    if (roomSettings && !userIsChangingSettings.current) {
+      setMaxPlayers(roomSettings.maxPlayers || 6);
+      setRoundTime(roomSettings.roundTime || 90);
+      setRounds(roomSettings.rounds || 3);
+    }
+  }, [roomSettings]);
+
+  // Track if settings have changed from server values
+  useEffect(() => {
+    if (roomSettings) {
+      const changed = 
+        maxPlayers !== (roomSettings.maxPlayers || 6) ||
+        roundTime !== (roomSettings.roundTime || 90) ||
+        rounds !== (roomSettings.rounds || 3);
+      setSettingsChanged(changed);
+    }
+  }, [maxPlayers, roundTime, rounds, roomSettings]);
+
+  // FIXED: Mark when user starts changing settings
+  const handleSettingChange = (setter, value) => {
+    userIsChangingSettings.current = true;
+    setter(value);
+    
+    // Clear existing timeout
+    if (settingsChangeTimeout.current) {
+      clearTimeout(settingsChangeTimeout.current);
+    }
+    
+    // Reset the flag after user stops changing settings for 2 seconds
+    settingsChangeTimeout.current = setTimeout(() => {
+      userIsChangingSettings.current = false;
+    }, 2000);
+  };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (settingsChangeTimeout.current) {
+        clearTimeout(settingsChangeTimeout.current);
+      }
+    };
+  }, []);
 
   const copyRoomCode = () => {
     navigator.clipboard.writeText(roomCode);
@@ -16,20 +66,31 @@ const Lobby = ({ roomCode, onStartGame, onLeaveRoom, players = [] }) => {
 
   const formatTime = (seconds) => {
     if (seconds < 60) return `${seconds}s`;
-    if (seconds < 120) return `${seconds / 60}m`;
-    return `${seconds / 60}min`;
+    if (seconds < 120) return `${Math.round(seconds / 60 * 10) / 10}m`;
+    return `${Math.round(seconds / 60)}min`;
   };
+
+  const handleStartGame = () => {
+    const currentSettings = {
+      maxPlayers,
+      roundTime,
+      rounds
+    };
+    onStartGame(currentSettings);
+  };
+
+  const canStartGame = players.length >= 3 && players.length <= maxPlayers;
 
   return (
     <div 
       className="min-h-screen relative overflow-hidden"
-          style={{
-          background: `linear-gradient(135deg, rgba(41, 36, 97, 0.4) 0%, rgba(162, 103, 218, 0.4) 50%, rgba(28, 11, 19, 0.4) 100%), url('/logo512.png')`,
-          backgroundSize: 'cover, 40%',
-          backgroundPosition: 'center, center',
-          backgroundRepeat: 'no-repeat, no-repeat',
-          backgroundAttachment: 'fixed, fixed'
-        }}
+      style={{
+        background: `linear-gradient(135deg, rgba(41, 36, 97, 0.4) 0%, rgba(162, 103, 218, 0.4) 50%, rgba(28, 11, 19, 0.4) 100%), url('/logo512.png')`,
+        backgroundSize: 'cover, 40%',
+        backgroundPosition: 'center, center',
+        backgroundRepeat: 'no-repeat, no-repeat',
+        backgroundAttachment: 'fixed, fixed'
+      }}
     >
       {/* Enhanced Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden">
@@ -78,12 +139,20 @@ const Lobby = ({ roomCode, onStartGame, onLeaveRoom, players = [] }) => {
                   </span>
                 )}
               </div>
+              {/* Player count indicator */}
+              <div className="flex items-center gap-2 mt-3">
+                <Users className="w-5 h-5 text-gray-300" />
+                <span className="text-gray-300 drop-shadow-sm">
+                  {players.length}/{maxPlayers} players
+                </span>
+              </div>
             </div>
             
             <Button 
               variant="secondary" 
               onClick={onLeaveRoom}
-              className="bg-red-500/30 hover:bg-red-500/40 border-red-400/40 text-white px-6 py-3 text-lg shadow-lg backdrop-blur-sm"
+              disabled={loading}
+              className="bg-red-500/30 hover:bg-red-500/40 border-red-400/40 text-white px-6 py-3 text-lg shadow-lg backdrop-blur-sm disabled:opacity-50"
             >
               <Home className="w-5 h-5 mr-2" />
               Leave Room
@@ -100,6 +169,9 @@ const Lobby = ({ roomCode, onStartGame, onLeaveRoom, players = [] }) => {
                   <Settings className="w-6 h-6 text-purple-200" />
                 </div>
                 Game Settings
+                {settingsChanged && (
+                  <div className="w-3 h-3 bg-yellow-400 rounded-full animate-pulse" title="Settings changed"></div>
+                )}
               </h2>
               
               <div className="space-y-8">
@@ -112,8 +184,9 @@ const Lobby = ({ roomCode, onStartGame, onLeaveRoom, players = [] }) => {
                   <div className="relative">
                     <select 
                       value={maxPlayers} 
-                      onChange={(e) => setMaxPlayers(Number(e.target.value))}
-                      className="w-full px-5 py-4 rounded-2xl bg-white/15 backdrop-blur-sm text-white text-lg border border-white/30 focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-400/50 transition-all duration-200 appearance-none cursor-pointer shadow-lg"
+                      onChange={(e) => handleSettingChange(setMaxPlayers, Number(e.target.value))}
+                      disabled={loading}
+                      className="w-full px-5 py-4 rounded-2xl bg-white/15 backdrop-blur-sm text-white text-lg border border-white/30 focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-400/50 transition-all duration-200 appearance-none cursor-pointer shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {[3,4,5,6,7,8].map(num => (
                         <option key={num} value={num} className="bg-gray-800 text-white">
@@ -127,6 +200,11 @@ const Lobby = ({ roomCode, onStartGame, onLeaveRoom, players = [] }) => {
                       </svg>
                     </div>
                   </div>
+                  {players.length > maxPlayers && (
+                    <p className="text-yellow-400 text-sm mt-1">
+                      Warning: Current players ({players.length}) exceed max players setting
+                    </p>
+                  )}
                 </div>
 
                 {/* Drawing Time */}
@@ -138,8 +216,9 @@ const Lobby = ({ roomCode, onStartGame, onLeaveRoom, players = [] }) => {
                   <div className="relative">
                     <select 
                       value={roundTime} 
-                      onChange={(e) => setRoundTime(Number(e.target.value))}
-                      className="w-full px-5 py-4 rounded-2xl bg-white/15 backdrop-blur-sm text-white text-lg border border-white/30 focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-400/50 transition-all duration-200 appearance-none cursor-pointer shadow-lg"
+                      onChange={(e) => handleSettingChange(setRoundTime, Number(e.target.value))}
+                      disabled={loading}
+                      className="w-full px-5 py-4 rounded-2xl bg-white/15 backdrop-blur-sm text-white text-lg border border-white/30 focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-400/50 transition-all duration-200 appearance-none cursor-pointer shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <option value={60} className="bg-gray-800">1 Minute</option>
                       <option value={90} className="bg-gray-800">1.5 Minutes</option>
@@ -163,8 +242,9 @@ const Lobby = ({ roomCode, onStartGame, onLeaveRoom, players = [] }) => {
                   <div className="relative">
                     <select 
                       value={rounds} 
-                      onChange={(e) => setRounds(Number(e.target.value))}
-                      className="w-full px-5 py-4 rounded-2xl bg-white/15 backdrop-blur-sm text-white text-lg border border-white/30 focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-400/50 transition-all duration-200 appearance-none cursor-pointer shadow-lg"
+                      onChange={(e) => handleSettingChange(setRounds, Number(e.target.value))}
+                      disabled={loading}
+                      className="w-full px-5 py-4 rounded-2xl bg-white/15 backdrop-blur-sm text-white text-lg border border-white/30 focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-400/50 transition-all duration-200 appearance-none cursor-pointer shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {[3,5,7,10].map(num => (
                         <option key={num} value={num} className="bg-gray-800">
@@ -185,12 +265,42 @@ const Lobby = ({ roomCode, onStartGame, onLeaveRoom, players = [] }) => {
               <Button 
                 variant="primary" 
                 size="lg" 
-                className="w-full mt-10 py-4 text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 transform hover:scale-105 transition-all duration-200 shadow-xl hover:shadow-2xl"
-                onClick={() => onStartGame({ maxPlayers, roundTime, rounds })}
+                className={`w-full mt-10 py-4 text-xl font-bold transform hover:scale-105 transition-all duration-200 shadow-xl hover:shadow-2xl disabled:transform-none disabled:opacity-50 ${
+                  canStartGame 
+                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700' 
+                    : 'bg-gray-600 cursor-not-allowed'
+                }`}
+                onClick={handleStartGame}
+                disabled={loading || !canStartGame}
               >
-                <Play className="w-6 h-6 mr-3" />
-                Start Game
+                {loading ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mr-3"></div>
+                    {settingsChanged ? 'Updating Settings...' : 'Starting...'}
+                  </div>
+                ) : (
+                  <>
+                    <Play className="w-6 h-6 mr-3" />
+                    {canStartGame 
+                      ? settingsChanged 
+                        ? 'Update Settings & Start' 
+                        : 'Start Game'
+                      : players.length < 3
+                        ? `Need ${3 - players.length} More Players`
+                        : 'Too Many Players'
+                    }
+                  </>
+                )}
               </Button>
+
+              {/* Settings status */}
+              {settingsChanged && !loading && (
+                <div className="mt-3 text-center">
+                  <p className="text-yellow-300 text-sm drop-shadow-sm">
+                    Settings will be updated when you start the game
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* How to Play Card - Enhanced glass effect */}
@@ -267,6 +377,50 @@ const Lobby = ({ roomCode, onStartGame, onLeaveRoom, players = [] }) => {
                   </div>
                 </div>
               </div>
+
+              {/* Current Players List */}
+              {players.length > 0 && (
+                <div className="mt-8 p-6 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10">
+                  <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                    <Users className="w-5 h-5" />
+                    Current Players ({players.length})
+                  </h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {players.map((player, index) => (
+                      <div key={player.id} className="flex items-center gap-2 p-3 bg-white/10 rounded-xl border border-white/20">
+                        <div className={`w-3 h-3 rounded-full ${player.online ? 'bg-green-400' : 'bg-red-400'}`}></div>
+                        <span className="text-white text-sm truncate">
+                          {player.name}
+                          {index === 0 && ' (Host)'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Status Indicator */}
+          <div className="text-center mt-8">
+            <div className={`inline-flex items-center gap-3 px-6 py-3 backdrop-blur-sm rounded-2xl border shadow-lg ${
+              canStartGame
+                ? 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-300 border-green-400/30'
+                : players.length < 3
+                  ? 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 text-yellow-300 border-yellow-400/30'
+                  : 'bg-gradient-to-r from-red-500/20 to-red-600/20 text-red-300 border-red-400/30'
+            }`}>
+              <div className={`w-3 h-3 rounded-full animate-pulse shadow-lg ${
+                canStartGame ? 'bg-green-400' : players.length < 3 ? 'bg-yellow-400' : 'bg-red-400'
+              }`}></div>
+              <span className="font-medium drop-shadow-sm">
+                {canStartGame
+                  ? 'Ready to start! Click Start Game when you\'re ready.'
+                  : players.length < 3
+                    ? `Need ${3 - players.length} more players to start (minimum 3 required)`
+                    : `Too many players! Maximum ${maxPlayers} allowed. Remove ${players.length - maxPlayers} players or increase max players.`
+                }
+              </span>
             </div>
           </div>
         </div>
